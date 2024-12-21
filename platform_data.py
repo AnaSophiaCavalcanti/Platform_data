@@ -1,17 +1,18 @@
+import os
 import streamlit as st
 from pymongo import MongoClient
 import pandas as pd
 import plotly.graph_objects as go
+from dotenv import load_dotenv
 
-#/Users/anasophia/Library/CloudStorage/OneDrive-Pessoal/Trabalho/FIU/"Jupyter Lab"
+load_dotenv()
 
-uri = 'mongodb+srv://fixedplatform01:dbFixedPlatformPwd01@cluster0.wzn4u.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0'
-client = MongoClient(uri, tlsAllowInvalidCertificates=True)  # Substitua pela URI correta, se necessário
+mongo_uri = os.getenv('MONGO_URI')
 
-# Selecionar o banco de dados
+client = MongoClient(mongo_uri, tlsAllowInvalidCertificates=True)
+
 db = client["exo_data"]
 
-# Listar coleções disponíveis
 collections = db.list_collection_names()
 collections = sorted(collections, reverse=True)
 
@@ -20,7 +21,6 @@ st.title("Platforms Data")
     #st.write("Dados carregados do MongoDB:")
 
 selected_collection = st.selectbox("Available collections:", collections)
-
 
 collection = db[selected_collection]
 
@@ -69,6 +69,7 @@ df_updated[12] = pd.to_numeric(df_updated[12], errors='coerce')
 df_updated[12] = df_updated[12].astype(float)
 df_updated[13] = df_updated[13].astype(float)
 df_updated[14] = df_updated[14].astype(float)
+df_updated[15] = pd.to_numeric(df_updated[15], errors='coerce')
 df_updated[15] = df_updated[15].astype(float)
 df_updated[16] = pd.to_numeric(df_updated[16], errors='coerce')
 df_updated[16] = df_updated[16].astype(float)
