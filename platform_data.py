@@ -119,7 +119,7 @@ elif choose_graph == 'Pressure':
 elif choose_graph == 'Depth, m':
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df_updated[0], y=df_updated[17], mode='lines'))
-    fig.update_layout(title='Depth', xaxis_title='Time [h]', yaxis_title='Depth [m]')
+    fig.update_layout(title='Depth', xaxis_title='Time [h]', yaxis_title='Depth [m]', yaxis=dict(autorange='reversed'))
     st.plotly_chart(fig, use_container_width=True)
 elif choose_graph == 'Voltage':
     fig = go.Figure()
