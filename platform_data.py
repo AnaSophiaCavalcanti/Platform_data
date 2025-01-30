@@ -11,7 +11,7 @@ load_dotenv()
 mongo_uri = os.getenv('MONGO_URI')
 client = MongoClient(mongo_uri, tlsAllowInvalidCertificates=True)
 
-db = client["FDEP_Project"]
+db = client["fdep_project"]
 
 collection = db['platforms_data']
 
