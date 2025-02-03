@@ -57,9 +57,12 @@ if selected_graph == 'Depth':
     fig.update_layout(title='Depth', xaxis_title='Time [h]', yaxis_title='depth')
     st.plotly_chart(fig, use_container_width=True)
 elif selected_graph == 'Temperature':
+    margin = 3
+    y_min = df['exodata.1'].min() - margin
+    y_max = df['exodata.1'].max() + margin
     fig = go.Figure()
     fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.1'], mode='lines'))
-    fig.update_layout(title='Temperature', xaxis_title='Time [h]', yaxis_title='Temperature [°C]')
+    fig.update_layout(title='Temperature', xaxis_title='Time [h]', yaxis_title='Temperature [°C]', yaxis=dict(range=[y_min, y_max]))
     st.plotly_chart(fig, use_container_width=True)
 elif selected_graph == 'Specific Conductance':
     fig = go.Figure()
@@ -77,9 +80,30 @@ elif selected_graph == 'ODO, %Sat':
     fig.update_layout(title='Optical Dissolved Oxygen', xaxis_title='Time [h]', yaxis_title='ODO [%Sat]')
     st.plotly_chart(fig, use_container_width=True)
 elif selected_graph == 'ODO, mg/L':
+    # Define ODO thresholds
+    low_threshold = 1     # Poor Oxygen (Hypoxia)
+    medium_threshold = 3  # Moderate Oxygen
+    high_threshold = 10   # Healthy Oxygen
     fig = go.Figure()
+    # Add colored background regions for different oxygen levels
+    fig.add_shape(type="rect", xref="paper", yref="y",
+                  x0=0, x1=1, y0=0, y1=low_threshold,
+                  fillcolor="#C6DBEF", opacity=0.3, layer="below", line_width=0)    
+    fig.add_shape(type="rect", xref="paper", yref="y",
+                  x0=0, x1=1, y0=low_threshold, y1=medium_threshold,
+                  fillcolor="#4292C6", opacity=0.3, layer="below", line_width=0)    
+    fig.add_shape(type="rect", xref="paper", yref="y",
+                  x0=0, x1=1, y0=medium_threshold, y1=high_threshold,
+                  fillcolor="#08306B", opacity=0.5, layer="below", line_width=0)
     fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.212'], mode='lines'))
-    fig.update_layout(title='Optical Dissolved Oxygen', xaxis_title='Time [h]', yaxis_title='ODO [mg/L]')
+    # Add category labels as annotations
+    fig.add_annotation(x=0.5, y=0.5, text="Poor Oxygen (0-1 mg/L)", showarrow=False, xref="paper", yref="y",
+                       font=dict(color="black", size=12))
+    fig.add_annotation(x=0.5, y=2, text="Moderate Oxygen (1-3 mg/L)", showarrow=False, xref="paper", yref="y",
+                       font=dict(color="black", size=12))
+    fig.add_annotation(x=0.5, y=6.5, text="Healthy Oxygen (3-10 mg/L)", showarrow=False, xref="paper", yref="y",
+                       font=dict(color="black", size=12))
+    fig.update_layout(title='Optical Dissolved Oxygen', xaxis_title='Time [h]', yaxis_title='ODO [mg/L]', yaxis=dict(range=[0, 10], showgrid=True, dtick=1))
     st.plotly_chart(fig, use_container_width=True)
 elif selected_graph == 'Turbidity':
     fig = go.Figure()
@@ -118,32 +142,32 @@ elif selected_graph == 'Current':
     st.plotly_chart(fig, use_container_width=True)
 elif selected_graph == 'Top Mag':
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.top mag'], mode='lines'))
+    fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.topmag'], mode='lines'))
     fig.update_layout(title='Top Mag', xaxis_title='Time [h]', yaxis_title='State')
     st.plotly_chart(fig, use_container_width=True)
 elif selected_graph == 'Top Float':
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.top float'], mode='lines'))
+    fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.topfloat'], mode='lines'))
     fig.update_layout(title='Top Float', xaxis_title='Time [h]', yaxis_title='State')
     st.plotly_chart(fig, use_container_width=True)
 elif selected_graph == 'Bottom Float':
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.bottom float'], mode='lines'))
+    fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.bottomfloat'], mode='lines'))
     fig.update_layout(title='Bottom Float', xaxis_title='Time [h]', yaxis_title='State')
     st.plotly_chart(fig, use_container_width=True)
 elif selected_graph == 'Bottom Mag':
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.bottom mag'], mode='lines'))
+    fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.bottommag'], mode='lines'))
     fig.update_layout(title='Bottom Mag', xaxis_title='Time [h]', yaxis_title='State')
     st.plotly_chart(fig, use_container_width=True)
 elif selected_graph == 'Sled State':
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.sled state'], mode='lines'))
+    fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.sledstate'], mode='lines'))
     fig.update_layout(title='Sled State', xaxis_title='Time [h]', yaxis_title='State')
     st.plotly_chart(fig, use_container_width=True)
 elif selected_graph == 'Power Mode':
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.power mode'], mode='lines'))
+    fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.powermode'], mode='lines'))
     fig.update_layout(title='Power Mode', xaxis_title='Time [h]', yaxis_title='State')
     st.plotly_chart(fig, use_container_width=True)
 
@@ -169,6 +193,6 @@ view_state = pdk.ViewState(
 st.pydeck_chart(pdk.Deck(
     layers=[layer],
     initial_view_state=view_state,
-    map_style="mapbox://styles/mapbox/streets-v11",  # Other styles available
+    map_style="mapbox://styles/mapbox/streets-v11",
 ))
 st.write(f"Marked Location: **Lat:** {latitude}, **Lon:** {longitude}")
