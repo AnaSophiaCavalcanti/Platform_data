@@ -27,14 +27,13 @@ with tab1:
     st.title("Platforms Data")
     
     platforms = collection.distinct('metadata.platform')
-    
-    # Retrieve the latest latitude/longitude for each possible value
+
     final_data = []
     for value in platforms:
         latest_doc = collection.find_one(
             {"metadata.platform": value},  
             sort=[("timestamp", -1)],  # Sort by most recent timestamp
-            projection={"latitude": 1, "longitude": 1}  # Return only needed fields
+            projection={"latitude": 1, "longitude": 1}
         )
         if latest_doc:
             final_data.append({
@@ -73,11 +72,7 @@ with tab1:
     
     selected_graph = st.selectbox('Available graphs:', graphs)
     
-    def update_depth(result):
-        global show_depth
-        show_depth = result
-    
-    # # _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+# # _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     
     if selected_graph == 'Depth':
         fig = go.Figure()
@@ -90,7 +85,7 @@ with tab1:
         y_max = df['exodata.1'].max() + margin
         y1 = df['exodata.1']
         y2 = df['metadata.depth']
-        st.write("Choose the option below to view the depth chart along with the temperature chart.")
+        st.write("Choose the option below to view the depth chart alongside the temperature chart.")
         show_depth = st.checkbox("See depth.")
         fig = go.Figure()
         if show_depth:
@@ -138,7 +133,7 @@ with tab1:
                            font=dict(color="black", size=12))
         fig.add_annotation(x=0.5, y=6.5, text="Healthy Oxygen (3-10 mg/L)", showarrow=False, xref="paper", yref="y",
                            font=dict(color="black", size=12))
-        st.write("Choose the option below to view the depth chart along with the temperature chart.")
+        st.write("Choose the option below to view the depth chart alongside the temperature chart.")
         show_depth = st.checkbox("See depth.")
         if show_depth:
             y1 = df['exodata.212']
@@ -218,10 +213,6 @@ with tab1:
     
     st.write('Location: ')
     
-    #latitude = df['latitude'].iloc[-1]
-    #longitude = df['longitude'].iloc[-1]
-    #data = pd.DataFrame({"lat": [latitude], "lon": [longitude]})
-    
     df_map = pd.DataFrame(final_data)
     
     platform = df['metadata.platform'].iloc[-1]
@@ -233,7 +224,7 @@ with tab1:
         "ScatterplotLayer",
         df_map,
         get_position=["longitude", "latitude"],
-        get_color="color", #[255, 0, 0],  # Red color
+        get_color="color", 
         get_radius=100,  # Size of marker
     )
     view_state = pdk.ViewState(
