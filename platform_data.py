@@ -7,17 +7,11 @@ from dotenv import load_dotenv
 import pydeck as pdk
 import plotly.express as px
 
-global show_depth
-show_depth = False
-
-
 load_dotenv()
 
 mongo_uri = os.getenv('MONGO_URI')
 client = MongoClient(mongo_uri, tlsAllowInvalidCertificates=True)
-
 db = client["fdep_project"]
-
 collection = db['platforms_data']
 
 tab1, tab2 = st.tabs(['Data', 'About'])
@@ -42,14 +36,10 @@ with tab1:
                 "longitude": latest_doc["longitude"]
             })
     
-    selected_collection = st.selectbox("Available collections:", platforms)
-    
-    query = {'metadata.platform': selected_collection}
-    
-    dates = collection.find(query).distinct('datetime')
-    
-    dates = sorted(set(dt.split(" ")[0] for dt in dates), reverse=True)
-    
+    selected_collection = st.selectbox("Available collections:", platforms)    
+    query = {'metadata.platform': selected_collection}    
+    dates = collection.find(query).distinct('datetime')    
+    dates = sorted(set(dt.split(" ")[0] for dt in dates), reverse=True)    
     selected_date = st.selectbox('Available dates:', dates)
     
     query = {
@@ -57,15 +47,13 @@ with tab1:
         'datetime': {'$regex': selected_date}
     }
     
-    data = list(collection.find(query))
-    
+    data = list(collection.find(query))    
     df = pd.json_normalize(data)
     
     if '_id' in df.columns:
         df = df.drop('_id', axis=1)
     
-    df['datetime'] = pd.to_datetime(df['datetime'])
-    
+    df['datetime'] = pd.to_datetime(df['datetime'])    
     client.close()
     
     graphs = ['Depth', 'Temperature', 'Specific Conductance', 'Salinity', 'ODO, %Sat', 'ODO, mg/L', 'Turbidity', 'TSS', 'Wiper Position', 'Pressure', 'Depth, m', 'Voltage', 'Current', 'Top Mag', 'Top Float', 'Bottom Float', 'Bottom Mag', 'Sled State', 'Power Mode']
@@ -138,7 +126,7 @@ with tab1:
         if show_depth:
             y1 = df['exodata.212']
             y2 = df['metadata.depth']
-            fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='temperature'))
+            fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='ODO'))
             fig.add_trace(go.Scatter(x=df['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(74,144,226,0.5)'), name='depth'))
             fig.update_layout(title='Optical Dissolved Oxygen', xaxis_title='Time [h]', yaxis_title='ODO [mg/L]', yaxis=dict(range=[0, 10], showgrid=True, dtick=1), yaxis2=dict(overlaying = 'y', side='right', range=[0, 432]))
         else:
