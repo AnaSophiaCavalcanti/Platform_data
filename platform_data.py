@@ -133,7 +133,7 @@ with tab1:
                            font=dict(color="black", size=12))
         fig.add_annotation(x=0.5, y=6.5, text="Healthy Oxygen (3-10 mg/L)", showarrow=False, xref="paper", yref="y",
                            font=dict(color="black", size=12))
-        st.write("Choose the option below to view the depth chart alongside the temperature chart.")
+        st.write("Choose the option below to view the depth chart alongside the ODO chart.")
         show_depth = st.checkbox("See depth.")
         if show_depth:
             y1 = df['exodata.212']
