@@ -5,7 +5,8 @@ import pandas as pd
 import plotly.graph_objects as go
 from dotenv import load_dotenv
 import pydeck as pdk
-import plotly.express as px
+from PIL import Image
+from datetime import datetime, timedelta
 
 load_dotenv()
 
@@ -18,10 +19,59 @@ tab1, tab2 = st.tabs(['Data', 'About'])
 
 with tab1:
 
-    st.title("Platforms Data")
-    
-    platforms = collection.distinct('metadata.platform')
+    st.markdown("### Platforms Data")
 
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        # Retrieve all unique platforms
+        platforms = collection.distinct("metadata.platform")
+        selected_platform = st.selectbox("Select a platform:", platforms)
+        
+        # User selects either "Daily" or "Weekly"
+        option = st.radio("Select the period:", ["Daily", "Weekly"])
+    
+    with col2:
+        query = {'metadata.platform': selected_platform}
+        dates = collection.find(query).distinct('datetime')    
+        dates = sorted(set(dt.split(" ")[0] for dt in dates), reverse=True) 
+        if option == "Weekly":
+            week_ranges = []
+            for d in dates:
+                date = pd.to_datetime(d)
+                start_date = date - pd.Timedelta(days=date.weekday())
+                end_date = start_date + pd.Timedelta(days=6)
+                week_ranges.append(f"{start_date.date()} - {end_date.date()}")
+            week_options = list(set(week_ranges))
+            week_options.sort(reverse=True)
+    
+        selected_period = st.selectbox("Select the date:", dates if option == "Daily" else week_options)
+    
+        if option == "Weekly":
+            start_date, end_date = selected_period.split(" - ")
+            query = {'metadata.platform': selected_platform,
+                     'datetime': {'$gte': start_date,'$lt': end_date}}
+        else:
+            query = {'metadata.platform': selected_platform,
+                     'datetime': {'$regex': selected_period}}
+        data = list(collection.find(query))    
+        df = pd.json_normalize(data)
+        
+        if '_id' in df.columns:
+            df = df.drop('_id', axis=1)
+        
+        df['datetime'] = pd.to_datetime(df['datetime'])    
+        selected_data = st.radio('Select the data:', ['Metadata', 'EXO data'])
+    
+    with col3:
+        if selected_data == 'EXO data':
+            exo_graphs = ['Temperature', 'Specific Conductance', 'Salinity', 'ODO, %Sat', 'ODO, mg/L', 'Turbidity', 'TSS', 'Wiper Position', 'Pressure', 'Depth, m']
+            
+            selected_graph = st.selectbox('Select a graph:', exo_graphs)
+        else:
+            metadata_graphs = ['Depth', 'Voltage', 'Current', 'Top Mag', 'Top Float', 'Bottom Float', 'Bottom Mag', 'Sled State', 'Power Mode']
+            selected_graph = st.selectbox('Select a graph:', metadata_graphs)
+        
     final_data = []
     for value in platforms:
         latest_doc = collection.find_one(
@@ -35,70 +85,74 @@ with tab1:
                 "latitude": latest_doc["latitude"],
                 "longitude": latest_doc["longitude"]
             })
-    
-    selected_collection = st.selectbox("Available collections:", platforms)    
-    query = {'metadata.platform': selected_collection}    
-    dates = collection.find(query).distinct('datetime')    
-    dates = sorted(set(dt.split(" ")[0] for dt in dates), reverse=True)    
-    selected_date = st.selectbox('Available dates:', dates)
-    
-    query = {
-        'metadata.platform': selected_collection,
-        'datetime': {'$regex': selected_date}
-    }
-    
-    data = list(collection.find(query))    
-    df = pd.json_normalize(data)
-    
-    if '_id' in df.columns:
-        df = df.drop('_id', axis=1)
-    
-    df['datetime'] = pd.to_datetime(df['datetime'])    
     client.close()
+
+    #df_filter = df[df['metadata.sledstate']!=2]
     
-    graphs = ['Depth', 'Temperature', 'Specific Conductance', 'Salinity', 'ODO, %Sat', 'ODO, mg/L', 'Turbidity', 'TSS', 'Wiper Position', 'Pressure', 'Depth, m', 'Voltage', 'Current', 'Top Mag', 'Top Float', 'Bottom Float', 'Bottom Mag', 'Sled State', 'Power Mode']
-    
-    selected_graph = st.selectbox('Available graphs:', graphs)
-    
-# # _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+# _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     
     if selected_graph == 'Depth':
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.depth'], mode='lines'))
         fig.update_layout(title='Depth', xaxis_title='Time [h]', yaxis_title='depth', yaxis=dict(range=[0, 432]))
         st.plotly_chart(fig, use_container_width=True)
+# _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Temperature':
         margin = 3
         y_min = df['exodata.1'].min() - margin
         y_max = df['exodata.1'].max() + margin
         y1 = df['exodata.1']
         y2 = df['metadata.depth']
-        st.write("Choose the option below to view the depth chart alongside the temperature chart.")
+        st.write("Choose the option below to view the depth graph alongside the temperature graph.")
         show_depth = st.checkbox("See depth.")
         fig = go.Figure()
         if show_depth:
             fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='temperature'))
             fig.add_trace(go.Scatter(x=df['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(74,144,226,0.5)'), name='depth'))
-            fig.update_layout(title='Temperature', xaxis_title='Time [h]', yaxis_title='Temperature [°C]', yaxis=dict(range=[y_min, y_max]), yaxis2=dict(overlaying = 'y', side='right', range=[0, 432]))
+            fig.update_layout(title='Temperature', xaxis_title='Time [h]', yaxis_title='Temperature [°C]', yaxis=dict(range=[y_min, y_max]), yaxis2=dict(title='depth', overlaying = 'y', side='right', range=[0, 432]))
         else:
             fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.1'], mode='lines'))
             fig.update_layout(title='Temperature', xaxis_title='Time [h]', yaxis_title='Temperature [°C]', yaxis=dict(range=[y_min, y_max]))
         st.plotly_chart(fig, use_container_width=True)
+# _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Specific Conductance':
+        y1 = df['exodata.7']
+        y2 = df['metadata.depth']
+        st.write("Choose the option below to view the depth graph alongside the conductance graph.")
+        show_depth = st.checkbox("See depth.")
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.7'], mode='lines'))
-        fig.update_layout(title='Specific Conductance', xaxis_title='Time [h]', yaxis_title='Specific Conductance [μS/cm]')
+        if show_depth:
+            fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='conductance'))
+            fig.add_trace(go.Scatter(x=df['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(74,144,226,0.5)'), name='depth'))
+            fig.update_layout(title='Specific Conductance', xaxis_title='Time [h]', yaxis_title='Specific Conductance [μS/cm]', yaxis2=dict(title='depth', overlaying = 'y', side='right', range=[0, 432]))
+        else:
+            fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.7'], mode='lines'))
+            fig.update_layout(title='Specific Conductance', xaxis_title='Time [h]', yaxis_title='Specific Conductance [μS/cm]')
         st.plotly_chart(fig, use_container_width=True)
+        st.write('Specific conductance (or conductivity) measures water’s ability to conduct electricity, which increases with higher ion concentration. It’s expressed in µS/cm (microsiemens per centimeter). Freshwater typically has low conductance, while brackish and seawater have higher values. Changes in conductivity can indicate pollution, runoff, or seasonal variations, as factors like temperature, salinity, and dissolved solids affect ion concentrations.')
+# _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Salinity':
+        y1 = df['exodata.12']
+        y2 = df['metadata.depth']
+        st.write("Choose the option below to view the depth graph alongside the salinity graph.")
+        show_depth = st.checkbox("See depth.")
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.12'], mode='lines'))
-        fig.update_layout(title='Salinity', xaxis_title='Time [h]', yaxis_title='Salinity [PPT]')
+        if show_depth:
+            fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='salinity'))
+            fig.add_trace(go.Scatter(x=df['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(74,144,226,0.5)'), name='depth'))
+            fig.update_layout(title='Salinity', xaxis_title='Time [h]', yaxis_title='Salinity [PPT]', yaxis2=dict(title='depth', overlaying = 'y', side='right', range=[0, 432]))
+        else:
+            fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.12'], mode='lines'))
+            fig.update_layout(title='Salinity', xaxis_title='Time [h]', yaxis_title='Salinity [PPT]')
         st.plotly_chart(fig, use_container_width=True)
+        st.write('Salinity, measured in ppt (parts per thousand), indicates water type and changes. Freshwater: 0–0.5 ppt, brackish: 0.5–30 ppt, seawater: ~35 ppt, hypersaline: >40 ppt. Tides increase salinity, while rainfall lowers it. Evaporation raises salinity, and sudden shifts may indicate pollution or river discharge.')
+# _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'ODO, %Sat':
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.211'], mode='lines'))
         fig.update_layout(title='Optical Dissolved Oxygen', xaxis_title='Time [h]', yaxis_title='ODO [%Sat]')
         st.plotly_chart(fig, use_container_width=True)
+# _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'ODO, mg/L':
         # Define ODO thresholds
         low_threshold = 1     # Poor Oxygen (Hypoxia)
@@ -121,43 +175,61 @@ with tab1:
                            font=dict(color="black", size=12))
         fig.add_annotation(x=0.5, y=6.5, text="Healthy Oxygen (3-10 mg/L)", showarrow=False, xref="paper", yref="y",
                            font=dict(color="black", size=12))
-        st.write("Choose the option below to view the depth chart alongside the ODO chart.")
+        st.write("Choose the option below to view the depth graph alongside the ODO graph.")
         show_depth = st.checkbox("See depth.")
         if show_depth:
             y1 = df['exodata.212']
             y2 = df['metadata.depth']
             fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='ODO'))
             fig.add_trace(go.Scatter(x=df['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(74,144,226,0.5)'), name='depth'))
-            fig.update_layout(title='Optical Dissolved Oxygen', xaxis_title='Time [h]', yaxis_title='ODO [mg/L]', yaxis=dict(range=[0, 10], showgrid=True, dtick=1), yaxis2=dict(overlaying = 'y', side='right', range=[0, 432]))
+            fig.update_layout(title='Optical Dissolved Oxygen', xaxis_title='Time [h]', yaxis_title='ODO [mg/L]', yaxis=dict(range=[0, 10], showgrid=True, dtick=1), yaxis2=dict(title='depth', overlaying = 'y', side='right', range=[0, 432]))
         else:
             fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.212'], mode='lines'))
             fig.update_layout(title='Optical Dissolved Oxygen', xaxis_title='Time [h]', yaxis_title='ODO [mg/L]', yaxis=dict(range=[0, 10], showgrid=True, dtick=1))    
         st.plotly_chart(fig, use_container_width=True)
+        st.write('Optical Dissolved Oxygen (ODO) in mg/L measures the concentration of dissolved oxygen in water using optical sensors. It is crucial for assessing water quality, as oxygen is vital for the survival of aquatic organisms. Low ODO levels can indicate pollution or poor water quality, which may harm ecosystems and reduce biodiversity.')
+# _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Turbidity':
+        y1 = df['exodata.223']
+        y2 = df['metadata.depth']
+        st.write("Choose the option below to view the depth graph alongside the turbidity graph.")
+        show_depth = st.checkbox("See depth.")
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.223'], mode='lines'))
-        fig.update_layout(title='Turbidity', xaxis_title='Time [h]', yaxis_title='Turbidity [FNU]')
+        if show_depth:
+            fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='turbidity'))
+            fig.add_trace(go.Scatter(x=df['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(74,144,226,0.5)'), name='depth'))
+            fig.update_layout(title='Turbidity', xaxis_title='Time [h]', yaxis_title='Turbidity [FNU]', yaxis2=dict(title='depth', overlaying = 'y', side='right', range=[0, 432]))
+        else:
+            fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.223'], mode='lines'))
+            fig.update_layout(title='Turbidity', xaxis_title='Time [h]', yaxis_title='Turbidity [FNU]')
         st.plotly_chart(fig, use_container_width=True)
+        st.write('Turbidity measures water clarity, indicating the presence of suspended particles. It’s expressed in FNU (Formazin Nephelometric Units). Clear water has low turbidity, while higher values suggest pollutants like sediment, algae, or organic matter. Changes in turbidity can result from rainfall, runoff, or disturbances, and it can impact aquatic life by reducing light penetration and oxygen levels.')
+# _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'TSS':
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.190'], mode='lines'))
         fig.update_layout(title='Total Suspended Solids', xaxis_title='Time [h]', yaxis_title='TSS [mg/L]')
         st.plotly_chart(fig, use_container_width=True)
+        st.write('TSS (Total Suspended Solids) measured in mg/L indicates the concentration of solid particles suspended in water. Low TSS values suggest clearer water, while higher values indicate more particles, such as sediment, organic matter, or pollutants. Changes in TSS can result from runoff, industrial discharge, or storms, and elevated levels can harm aquatic life by reducing light penetration and oxygen availability.')
+# _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Wiper Position':
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.229'], mode='lines'))
         fig.update_layout(title='Wiper Position', xaxis_title='Time [h]', yaxis_title='Wiper Position [V]')
         st.plotly_chart(fig, use_container_width=True)
+# _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Pressure':
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.20'], mode='lines'))
         fig.update_layout(title='Pressure', xaxis_title='Time [h]', yaxis_title='Pressure [psia]')
         st.plotly_chart(fig, use_container_width=True)
+# _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Depth, m':
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.22'], mode='lines'))
         fig.update_layout(title='Depth', xaxis_title='Time [h]', yaxis_title='Depth [m]', yaxis=dict(autorange='reversed'))
         st.plotly_chart(fig, use_container_width=True)
+# _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Voltage':
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.voltage'], mode='lines'))
@@ -206,7 +278,7 @@ with tab1:
     platform = df['metadata.platform'].iloc[-1]
     latitude, longitude = df_map.query('platform == @platform')[["latitude", "longitude"]].iloc[0]
     
-    df_map["color"] = df_map["platform"].apply(lambda x: [255, 0, 0, 200] if x == selected_collection else [0, 0, 255, 200])
+    df_map["color"] = df_map["platform"].apply(lambda x: [255, 0, 0, 200] if x == selected_platform else [0, 0, 255, 200])
     
     layer = pdk.Layer(
         "ScatterplotLayer",
@@ -227,9 +299,17 @@ with tab1:
         map_style="mapbox://styles/mapbox/streets-v11",
     ))
     
-    st.write(f"Marked Location: **Lat:** {latitude}, **Lon:** {longitude}")
+    #st.write(f"Marked Location: **Lat:** {latitude}, **Lon:** {longitude}")
 
 with tab2:
-    st.title("Under Construction...")
+    st.markdown("### Under Construction...")
 
-    
+    col1, col2= st.columns(2)
+
+    with col1:
+        image = Image.open('designed_platform.PNG')
+        st.image(image, caption='Designed Platform', use_container_width=True)
+    with col2:
+        image = Image.open('real_platform.png')
+        resized_image = image.resize((281,942)) #1703x5708
+        st.image(resized_image, caption='Real Platform')
