@@ -7,6 +7,11 @@ from dotenv import load_dotenv
 import pydeck as pdk
 from PIL import Image
 from datetime import datetime, timedelta
+import hashlib
+
+# Function to verify the password
+def check_password(password):
+    return hashlib.sha256(password.encode()).hexdigest() == 'c467fa26032df945496ca1bef460161bf21c42c8e2899a90d29e0829390cb776'
 
 load_dotenv()
 
@@ -14,6 +19,15 @@ mongo_uri = os.getenv('MONGO_URI')
 client = MongoClient(mongo_uri, tlsAllowInvalidCertificates=True)
 db = client["fdep_project"]
 collection = db['platforms_data']
+#collection = db['P8_parameters']
+
+platform_location = {
+    'Miami River': 'P1',
+    'Biscayne Bay': 'P2',
+    'Little River Canal': 'P3',
+    'Biscayne Canal': 'P4',
+    'North Bay Village': 'P5',
+}
 
 tab1, tab2 = st.tabs(['Data', 'About'])
 
@@ -26,7 +40,7 @@ with tab1:
     with col1:
         # Retrieve all unique platforms
         platforms = collection.distinct("metadata.platform")
-        selected_platform = st.selectbox("Select a platform:", platforms)
+        selected_platform = platform_location[st.selectbox("Select a platform:", platform_location.keys())]
         
         # User selects either "Daily" or "Weekly"
         option = st.radio("Select the period:", ["Daily", "Weekly"])
@@ -54,23 +68,25 @@ with tab1:
         else:
             query = {'metadata.platform': selected_platform,
                      'datetime': {'$regex': selected_period}}
+        
         data = list(collection.find(query))    
         df = pd.json_normalize(data)
         
         if '_id' in df.columns:
             df = df.drop('_id', axis=1)
         
-        df['datetime'] = pd.to_datetime(df['datetime'])    
-        selected_data = st.radio('Select the data:', ['Metadata', 'EXO data'])
+        df['datetime'] = pd.to_datetime(df['datetime'])
+
+        password = st.text_input("Authorized users only:", type="password")
+        
+        if password and check_password(password):
+            options = ['Depth', 'Temperature', 'Specific Conductance', 'Salinity', 'ODO, %Sat', 'ODO, mg/L', 'Turbidity', 'TSS', 'Wiper Position', 'Pressure', 'Depth, m', 'Voltage', 'Current', 'Top Mag', 'Top Float', 'Bottom Float', 'Bottom Mag', 'Sled State', 'Power Mode']
+            st.success("Extra graphs unlocked!")
+        else:
+            options = ['Depth', 'Temperature', 'Specific Conductance', 'Salinity', 'ODO, %Sat', 'ODO, mg/L', 'Turbidity', 'TSS', 'Wiper Position', 'Pressure', 'Depth, m']
     
     with col3:
-        if selected_data == 'EXO data':
-            exo_graphs = ['Temperature', 'Specific Conductance', 'Salinity', 'ODO, %Sat', 'ODO, mg/L', 'Turbidity', 'TSS', 'Wiper Position', 'Pressure', 'Depth, m']
-            
-            selected_graph = st.selectbox('Select a graph:', exo_graphs)
-        else:
-            metadata_graphs = ['Depth', 'Voltage', 'Current', 'Top Mag', 'Top Float', 'Bottom Float', 'Bottom Mag', 'Sled State', 'Power Mode']
-            selected_graph = st.selectbox('Select a graph:', metadata_graphs)
+        selected_graph = st.selectbox('Select a graph:', options)
         
     final_data = []
     for value in platforms:
@@ -271,7 +287,7 @@ with tab1:
         fig.update_layout(title='Power Mode', xaxis_title='Time [h]', yaxis_title='State')
         st.plotly_chart(fig, use_container_width=True)
     
-    st.write('Location: ')
+    st.write('Location: (marked in red)')
     
     df_map = pd.DataFrame(final_data)
     
@@ -279,37 +295,53 @@ with tab1:
     latitude, longitude = df_map.query('platform == @platform')[["latitude", "longitude"]].iloc[0]
     
     df_map["color"] = df_map["platform"].apply(lambda x: [255, 0, 0, 200] if x == selected_platform else [0, 0, 255, 200])
-    
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        df_map,
-        get_position=["longitude", "latitude"],
-        get_color="color", 
-        get_radius=100,  # Size of marker
-    )
-    view_state = pdk.ViewState(
-        latitude=latitude,
-        longitude=longitude,
-        zoom=12,  # Adjust zoom level
-        pitch=0,
-    )
-    st.pydeck_chart(pdk.Deck(
-        layers=[layer],
-        initial_view_state=view_state,
-        map_style="mapbox://styles/mapbox/streets-v11",
-    ))
-    
-    #st.write(f"Marked Location: **Lat:** {latitude}, **Lon:** {longitude}")
 
-with tab2:
-    st.markdown("### Under Construction...")
-
-    col1, col2= st.columns(2)
+    col1, col2 = st.columns(2)
 
     with col1:
-        image = Image.open('designed_platform.PNG')
-        st.image(image, caption='Designed Platform', use_container_width=True)
+    
+        layer = pdk.Layer(
+            "ScatterplotLayer",
+            df_map,
+            get_position=["longitude", "latitude"],
+            get_color="color", 
+            get_radius=100,  # Size of marker
+        )
+        view_state = pdk.ViewState(
+            latitude=latitude,
+            longitude=longitude,
+            zoom=12,  # Adjust zoom level
+            pitch=0,
+        )
+        st.pydeck_chart(pdk.Deck(
+            layers=[layer],
+            initial_view_state=view_state,
+            map_style="mapbox://styles/mapbox/streets-v11",
+        ))
+        #st.write(f"Marked Location: **Lat:** {latitude}, **Lon:** {longitude}")
+
     with col2:
-        image = Image.open('real_platform.png')
-        resized_image = image.resize((281,942)) #1703x5708
-        st.image(resized_image, caption='Real Platform')
+        st.write(' ')
+        if selected_platform == 'P1':            
+            st.image('p1.png', caption='Real Platform')
+        elif selected_platform == 'P3':
+            st.image('p3.png', caption='Real Platform')
+        elif selected_platform == 'P4':
+            st.image('p4.png', caption='Real Platform')
+        elif selected_platform == 'P5':
+            st.image('p5.png', caption='Real Platform')
+
+with tab2:
+    #st.markdown("### Under Construction...")
+
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        st.video('platform_video.mov')
+    with col2:
+        pass
+    with col3:
+        pass
+    with col4:
+        pass
+
