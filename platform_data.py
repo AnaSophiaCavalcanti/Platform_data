@@ -17,8 +17,7 @@ load_dotenv()
 mongo_uri = os.getenv('MONGO_URI')
 client = MongoClient(mongo_uri, tlsAllowInvalidCertificates=True)
 db = client["fdep_project"]
-#collection = db['platforms_data']
-collection = db['P6_parameters']
+collection = db['platforms_data']
 
 platform_location = {
     'Miami River': 'P1',
@@ -336,7 +335,7 @@ with tab2:
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.video('platform_video.mov')
+        st.video('platform.mov')
     with col2:
         pass
     with col3:
