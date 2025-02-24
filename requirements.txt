@@ -4,4 +4,3 @@ pandas==2.2.3
 plotly==5.18.0
 python-dotenv==1.0.1
 pydeck==0.8.1b0
-pillow==10.0.1

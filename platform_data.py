@@ -5,7 +5,6 @@ import pandas as pd
 import plotly.graph_objects as go
 from dotenv import load_dotenv
 import pydeck as pdk
-from PIL import Image
 from datetime import datetime, timedelta
 import hashlib
 
