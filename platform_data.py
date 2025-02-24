@@ -18,8 +18,8 @@ load_dotenv()
 mongo_uri = os.getenv('MONGO_URI')
 client = MongoClient(mongo_uri, tlsAllowInvalidCertificates=True)
 db = client["fdep_project"]
-collection = db['platforms_data']
-#collection = db['P8_parameters']
+#collection = db['platforms_data']
+collection = db['P6_parameters']
 
 platform_location = {
     'Miami River': 'P1',
