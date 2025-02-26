@@ -27,6 +27,8 @@ platform_location = {
     'North Bay Village': 'P5',
 }
 
+cycl2cm = 0.3175
+
 tab1, tab2 = st.tabs(['Data', 'About'])
 
 with tab1:
@@ -102,28 +104,37 @@ with tab1:
     client.close()
 
     #df_filter = df[df['metadata.sledstate']!=2]
+    df_filter = df[df['metadata.sledstate']==0]
     
 # _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     
     if selected_graph == 'Depth':
+        y1 = df['metadata.depth']*cycl2cm
+        y2 = df_filter['metadata.depth']*cycl2cm + 27
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.depth'], mode='lines'))
-        fig.update_layout(title='Depth', xaxis_title='Time [h]', yaxis_title='depth', yaxis=dict(range=[0, 432]))
+        fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='sensor depth'))
+        fig.add_trace(go.Scatter(x=df_filter['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(255,0,0,0.5)'), name='water level'))
+        fig.update_layout(title='Depth', xaxis_title='Time [h]', yaxis_title='depth [cm]', yaxis=dict(range=[0, 160]), yaxis2=dict(title='water level [cm]', overlaying = 'y', side='right', range=[0, 160]))
         st.plotly_chart(fig, use_container_width=True)
+        st.write('The zero-depth reference is located at the lowest part of the platform, and the depth measurement corresponds to the distance between the EXO sensors and this reference point.')
+        # fig = go.Figure()
+        # fig.add_trace(go.Scatter(x=df['datetime'], y=df['metadata.depth']*0.3175, mode='lines'))
+        # fig.update_layout(title='Depth', xaxis_title='Time [h]', yaxis_title='depth [cm]', yaxis=dict(range=[0, 140]))
+        # st.plotly_chart(fig, use_container_width=True)
 # _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Temperature':
         margin = 3
         y_min = df['exodata.1'].min() - margin
         y_max = df['exodata.1'].max() + margin
         y1 = df['exodata.1']
-        y2 = df['metadata.depth']
+        y2 = df['metadata.depth']*cycl2cm
         st.write("Choose the option below to view the depth graph alongside the temperature graph.")
         show_depth = st.checkbox("See depth.")
         fig = go.Figure()
         if show_depth:
             fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='temperature'))
             fig.add_trace(go.Scatter(x=df['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(74,144,226,0.5)'), name='depth'))
-            fig.update_layout(title='Temperature', xaxis_title='Time [h]', yaxis_title='Temperature [°C]', yaxis=dict(range=[y_min, y_max]), yaxis2=dict(title='depth', overlaying = 'y', side='right', range=[0, 432]))
+            fig.update_layout(title='Temperature', xaxis_title='Time [h]', yaxis_title='Temperature [°C]', yaxis=dict(range=[y_min, y_max]), yaxis2=dict(title='depth [cm]', overlaying = 'y', side='right', range=[0, 140]))
         else:
             fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.1'], mode='lines'))
             fig.update_layout(title='Temperature', xaxis_title='Time [h]', yaxis_title='Temperature [°C]', yaxis=dict(range=[y_min, y_max]))
@@ -131,14 +142,14 @@ with tab1:
 # _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Specific Conductance':
         y1 = df['exodata.7']
-        y2 = df['metadata.depth']
+        y2 = df['metadata.depth']*cycl2cm
         st.write("Choose the option below to view the depth graph alongside the conductance graph.")
         show_depth = st.checkbox("See depth.")
         fig = go.Figure()
         if show_depth:
             fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='conductance'))
             fig.add_trace(go.Scatter(x=df['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(74,144,226,0.5)'), name='depth'))
-            fig.update_layout(title='Specific Conductance', xaxis_title='Time [h]', yaxis_title='Specific Conductance [μS/cm]', yaxis2=dict(title='depth', overlaying = 'y', side='right', range=[0, 432]))
+            fig.update_layout(title='Specific Conductance', xaxis_title='Time [h]', yaxis_title='Specific Conductance [μS/cm]', yaxis2=dict(title='depth [cm]', overlaying = 'y', side='right', range=[0, 140]))
         else:
             fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.7'], mode='lines'))
             fig.update_layout(title='Specific Conductance', xaxis_title='Time [h]', yaxis_title='Specific Conductance [μS/cm]')
@@ -147,14 +158,14 @@ with tab1:
 # _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Salinity':
         y1 = df['exodata.12']
-        y2 = df['metadata.depth']
+        y2 = df['metadata.depth']*cycl2cm
         st.write("Choose the option below to view the depth graph alongside the salinity graph.")
         show_depth = st.checkbox("See depth.")
         fig = go.Figure()
         if show_depth:
             fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='salinity'))
             fig.add_trace(go.Scatter(x=df['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(74,144,226,0.5)'), name='depth'))
-            fig.update_layout(title='Salinity', xaxis_title='Time [h]', yaxis_title='Salinity [PPT]', yaxis2=dict(title='depth', overlaying = 'y', side='right', range=[0, 432]))
+            fig.update_layout(title='Salinity', xaxis_title='Time [h]', yaxis_title='Salinity [PPT]', yaxis2=dict(title='depth [cm]', overlaying = 'y', side='right', range=[0, 140]))
         else:
             fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.12'], mode='lines'))
             fig.update_layout(title='Salinity', xaxis_title='Time [h]', yaxis_title='Salinity [PPT]')
@@ -193,10 +204,10 @@ with tab1:
         show_depth = st.checkbox("See depth.")
         if show_depth:
             y1 = df['exodata.212']
-            y2 = df['metadata.depth']
+            y2 = df['metadata.depth']*cycl2cm
             fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='ODO'))
             fig.add_trace(go.Scatter(x=df['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(74,144,226,0.5)'), name='depth'))
-            fig.update_layout(title='Optical Dissolved Oxygen', xaxis_title='Time [h]', yaxis_title='ODO [mg/L]', yaxis=dict(range=[0, 10], showgrid=True, dtick=1), yaxis2=dict(title='depth', overlaying = 'y', side='right', range=[0, 432]))
+            fig.update_layout(title='Optical Dissolved Oxygen', xaxis_title='Time [h]', yaxis_title='ODO [mg/L]', yaxis=dict(range=[0, 10], showgrid=True, dtick=1), yaxis2=dict(title='depth [cm]', overlaying = 'y', side='right', range=[0, 140]))
         else:
             fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.212'], mode='lines'))
             fig.update_layout(title='Optical Dissolved Oxygen', xaxis_title='Time [h]', yaxis_title='ODO [mg/L]', yaxis=dict(range=[0, 10], showgrid=True, dtick=1))    
@@ -205,14 +216,14 @@ with tab1:
 # _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Turbidity':
         y1 = df['exodata.223']
-        y2 = df['metadata.depth']
+        y2 = df['metadata.depth']*cycl2cm
         st.write("Choose the option below to view the depth graph alongside the turbidity graph.")
         show_depth = st.checkbox("See depth.")
         fig = go.Figure()
         if show_depth:
             fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='turbidity'))
             fig.add_trace(go.Scatter(x=df['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(74,144,226,0.5)'), name='depth'))
-            fig.update_layout(title='Turbidity', xaxis_title='Time [h]', yaxis_title='Turbidity [FNU]', yaxis2=dict(title='depth', overlaying = 'y', side='right', range=[0, 432]))
+            fig.update_layout(title='Turbidity', xaxis_title='Time [h]', yaxis_title='Turbidity [FNU]', yaxis2=dict(title='depth [cm]', overlaying = 'y', side='right', range=[0, 140]))
         else:
             fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.223'], mode='lines'))
             fig.update_layout(title='Turbidity', xaxis_title='Time [h]', yaxis_title='Turbidity [FNU]')
