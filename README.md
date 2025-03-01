@@ -31,10 +31,18 @@ Generates dynamic charts for each water quality parameter (temperature, salinity
 ## **4. Project Structure**  
 ```plaintext
 📂 src                # Source code  
- ┣ platform_data.py   # Python script  
- 📂 images            # Images and diagrams  
+ ┣ platform_data.py   # Main Python script  
+ 📂 images            # Images and diagrams 
+ 📂 videos           # Folder for project videos
 README.md             # Main documentation  
 requirements.txt      # Project dependencies  
 .gitignore            # Git ignore file  
+```
 
-  
+### 🌍 Platform Locations  
+Below is a map showing the installation locations of the eight sensing platforms in Biscayne Bay:
+
+### 🚢 Platform Image  
+Here is an image of one of the sensing platforms used in the project:
+
+![Platform Image](images/designed_platform.PNG)
