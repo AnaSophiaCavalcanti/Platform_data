@@ -103,8 +103,8 @@ with tab1:
             })
     client.close()
 
-    #df_filter = df[df['metadata.sledstate']!=2]
-    df_filter = df[df['metadata.sledstate']==0]
+    #df_filter_calibration = df[df['metadata.sledstate']!=2]
+    df_filter = df[df['metadata.sledstate'] == 0]
     
 # _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     
