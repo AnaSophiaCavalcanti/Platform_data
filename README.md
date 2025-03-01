@@ -45,4 +45,4 @@ Below is a map showing the installation locations of the eight sensing platforms
 ### 🚢 Platform Image  
 Here is an image of one of the sensing platforms used in the project:
 
-<img src="images/platform_image.jpg" width="250"/>
+![Platform Image](images/designed_platform.PNG)
