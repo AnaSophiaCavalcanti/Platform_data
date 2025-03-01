@@ -29,6 +29,7 @@ The sensor adjusts its position vertically within a 1.40 m range, enabling measu
 Generates dynamic charts for each water quality parameter (temperature, salinity, conductance, ODO, and turbidity), along with depth data. Users can interactively explore the relationship between these parameters and depth over time.    
 
 ## **4. Project Structure**  
+```plaintext
 📂 src                # Source code  
  ┣ platform_data.py   # Python script  
  📂 images            # Images and diagrams  
