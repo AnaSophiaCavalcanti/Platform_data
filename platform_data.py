@@ -332,13 +332,13 @@ with tab1:
     with col2:
         st.write(' ')
         if selected_platform == 'P1':            
-            st.image('p1.png', caption='Real Platform')
+            st.image('images/p1.png', caption='Real Platform')
         elif selected_platform == 'P3':
-            st.image('p3.png', caption='Real Platform')
+            st.image('images/p3.png', caption='Real Platform')
         elif selected_platform == 'P4':
-            st.image('p4.png', caption='Real Platform')
+            st.image('images/p4.png', caption='Real Platform')
         elif selected_platform == 'P5':
-            st.image('p5.png', caption='Real Platform')
+            st.image('images/p5.png', caption='Real Platform')
 
 with tab2:
     #st.markdown("### Under Construction...")
@@ -346,7 +346,7 @@ with tab2:
     col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-        st.video('platform.mov')
+        st.video('videos/platform.mov')
     with col2:
         pass
     with col3:
