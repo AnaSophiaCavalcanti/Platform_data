@@ -7,9 +7,6 @@ from dotenv import load_dotenv
 import pydeck as pdk
 from datetime import datetime, timedelta
 import hashlib
-from scipy.stats import pearsonr
-import statsmodels.api as sm
-import numpy as np
 
 # Function to verify the password
 def check_password(password):
