@@ -7,6 +7,9 @@ from dotenv import load_dotenv
 import pydeck as pdk
 from datetime import datetime, timedelta
 import hashlib
+from scipy.stats import pearsonr
+import statsmodels.api as sm
+import numpy as np
 
 # Function to verify the password
 def check_password(password):
@@ -32,10 +35,10 @@ platform_location = {
     'L0_parameters': 'BBC',
     'L1_parameters': 'Biscayne Canal',
     'L2_parameters': 'Biscayne Bay',
-    'L3_parameters': 'Little River Canal (Up)',
-    'L4_parameters': 'Little River Canal (Down)',
+    'L3_parameters': 'Little River (Up)',
+    'L4_parameters': 'Little River (Down)',
     'L5_parameters': 'North Bay Village (West)',
-    'L6_parameters': 'North Bay Village (east)',
+    'L6_parameters': 'North Bay Village (East)',
     'L7_parameters': 'Miami River',   
     'L8_parameters': 'Miami River (Down)',
 }
@@ -130,7 +133,9 @@ with tab1:
 
     df_filter_calibration = df[df['metadata.sledstate']!=2]
     df_filter = df[df['metadata.sledstate'] == 0]
-    
+    df_profile = df[df['metadata.sledstate'] == 1]
+
+# _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _     
 # _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     
     if selected_graph == 'Depth':
@@ -257,14 +262,38 @@ with tab1:
 # _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Pressure':
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.20'], mode='lines'))
-        fig.update_layout(title='Pressure', xaxis_title='Time [h]', yaxis_title='Pressure [psia]')
+        y1 = df['exodata.20']
+        y2 = df['metadata.depth']*cycl2cm
+        st.write("Choose the option below to view the depth graph alongside the pressure graph.")
+        show_depth = st.checkbox("See depth.")
+        fig = go.Figure()
+        if show_depth:
+            fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='pressure'))
+            fig.add_trace(go.Scatter(x=df['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(74,144,226,0.5)'), name='depth'))
+            fig.update_layout(title='Pressure', xaxis_title='Time [h]', yaxis_title='Pressure [psia]', yaxis2=dict(title='depth [cm]', overlaying = 'y', side='right', range=[0, 140]))
+        else:
+            fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.20'], mode='lines'))
+            fig.update_layout(title='Pressure', xaxis_title='Time [h]', yaxis_title='Pressure [psia]')
+        #fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.20'], mode='lines'))
+        #fig.update_layout(title='Pressure', xaxis_title='Time [h]', yaxis_title='Pressure [psia]')
         st.plotly_chart(fig, use_container_width=True)
 # _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Depth, m':
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.22'], mode='lines'))
-        fig.update_layout(title='Depth', xaxis_title='Time [h]', yaxis_title='Depth [m]', yaxis=dict(autorange='reversed'))
+        y1 = df['exodata.22']
+        y2 = df['metadata.depth']*cycl2cm
+        st.write("Choose the option below to view the depth graph alongside the EXO's depth graph.")
+        show_depth = st.checkbox("See depth.")
+        fig = go.Figure()
+        if show_depth:
+            fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='EXO\'s depth'))
+            fig.add_trace(go.Scatter(x=df['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(74,144,226,0.5)'), name='depth'))
+            fig.update_layout(title='Depth', xaxis_title='Time [h]', yaxis_title='Depth [m]', yaxis2=dict(title='depth [cm]', overlaying = 'y', side='right', range=[0, 140]))
+        else:
+            fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.22'], mode='lines'))
+            fig.update_layout(title='Depth', xaxis_title='Time [h]', yaxis_title='Depth [m]')
+        #fig.add_trace(go.Scatter(x=df['datetime'], y=df['exodata.22'], mode='lines'))
+        #fig.update_layout(title='Depth', xaxis_title='Time [h]', yaxis_title='Depth [m]', yaxis=dict(autorange='reversed'))
         st.plotly_chart(fig, use_container_width=True)
 # _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
     elif selected_graph == 'Voltage':
@@ -355,6 +384,8 @@ with tab1:
             st.image('images/p5.png', caption='Real Platform')
         elif platform == 'P6':
             st.image('images/p6.png', caption='Real Platform')
+        elif platform == 'P7':
+            st.image('images/p7.png', caption='Real Platform')
         elif platform == 'P8':
             st.image('images/p8.png', caption='Real Platform')
 
