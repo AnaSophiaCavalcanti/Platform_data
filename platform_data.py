@@ -429,7 +429,7 @@ with tab1:
         elif platform == 'P5':
             st.image('images/p5.png', caption='Real Platform')
         elif platform == 'P6':
-            st.image('images/p8.png', caption='Real Platform')
+            st.image('images/p6.png', caption='Real Platform')
         elif platform == 'P7':
             st.image('images/p7.png', caption='Real Platform')
         elif platform == 'P8':
