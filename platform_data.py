@@ -7,6 +7,9 @@ from dotenv import load_dotenv
 import pydeck as pdk
 from datetime import datetime, timedelta
 import hashlib
+import certifi
+import json
+
 
 # Function to verify the password
 def check_password(password):
@@ -14,9 +17,60 @@ def check_password(password):
 
 load_dotenv()
 
+# Connect to MongoDB
 mongo_uri = os.getenv('MONGO_URI')
-client = MongoClient(mongo_uri, tlsAllowInvalidCertificates=True)
+client = MongoClient(mongo_uri,  tlsCAFile=certifi.where()) #tlsAllowInvalidCertificates=True,
 db = client["fdep_project"]
+
+@st.cache_resource
+def update_collection_dates():
+    
+    # Load existing document from MongoDB
+    doc = db["collection_dates"].find_one({"_id": "unique_dates"})
+    collection_dates = {k: v for k, v in doc.items() if k != "_id"} if doc else {}
+
+    updated = False
+
+    # Helper function to convert timestamp or datetime to "YYYY-MM-DD"
+    def extract_date(dt):
+        if isinstance(dt, str):
+            try:
+                dt = datetime.fromisoformat(dt)
+            except ValueError:
+                try:
+                    dt = datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
+                except ValueError:
+                    return None
+        if isinstance(dt, datetime):
+            return dt.strftime("%Y-%m-%d")
+        return None
+
+    # Loop through all 8 collections
+    for i in range(8):
+        col_name = f"L{i}_parameters"
+        collection = db[col_name]
+
+        # Get the most recent timestamp
+        last_doc = collection.find_one({}, sort=[("timestamp", -1)])
+        last_dt = last_doc.get("datetime") if last_doc else None
+        last_date = extract_date(last_dt)
+
+        if not last_date:
+            continue
+
+        # Update if the date is new
+        current_dates = set(collection_dates.get(col_name, []))
+        if last_date not in current_dates:
+            current_dates.add(last_date)
+            collection_dates[col_name] = sorted(current_dates)
+            updated = True
+
+    # Save only if updates were made
+    if updated:
+        collection_dates["_id"] = "unique_dates"
+        db["collection_dates"].replace_one({"_id": "unique_dates"}, collection_dates, upsert=True)
+
+update_collection_dates()
 
 collections_ = db.list_collection_names()
 
@@ -34,8 +88,8 @@ platform_location = {
     'L2_parameters': 'Biscayne Bay',
     'L3_parameters': 'Little River (Up)',
     'L4_parameters': 'Little River (Down)',
-    'L5_parameters': 'North Bay Village (West)',
-    'L6_parameters': 'North Bay Village (East)',
+    'L5_parameters': 'North Bay Village (North)',
+    'L6_parameters': 'North Bay Village (South)',
     'L7_parameters': 'Miami River',   
     'L8_parameters': 'Miami River (Down)',
 }
@@ -86,7 +140,7 @@ with tab1:
         selected_platform = st.selectbox("Select a platform:", available_locations)
 
         collection_key = next((key for key, value in platform_location.items() if value == selected_platform), None)
-
+        
         collection = db[collection_key]
 
         column = water_columns[selected_platform]*2.54
@@ -97,9 +151,13 @@ with tab1:
         option = st.radio("Select the period:", ["Daily", "Weekly"])
     
     with col2:
-        #query = {'metadata.platform': selected_platform}
-        dates = collection.distinct('datetime')    
-        dates = sorted(set(dt.split(" ")[0] for dt in dates), reverse=True) 
+        
+       # Read the document containing all unique dates by collection
+        doc = db["collection_dates"].find_one({"_id": "unique_dates"})
+        
+        # Retrieve the list of dates for the given collection key, in reverse chronological order
+        dates = list(reversed(doc.get(collection_key, []))) if doc else []
+        
         if option == "Weekly":
             week_ranges = []
             for d in dates:
@@ -113,14 +171,29 @@ with tab1:
         selected_period = st.selectbox("Select the date:", dates if option == "Daily" else week_options)
     
         if option == "Weekly":
-            start_date, end_date = selected_period.split(" - ")
-            query = {'datetime': {'$gte': start_date,'$lt': end_date}}
-            # query = {'metadata.platform': selected_platform,
-            #          'datetime': {'$gte': start_date,'$lt': end_date}}
+            # Parse start and end dates from string
+            start_str, end_str = selected_period.split(" - ")
+            
+            # Convert to datetime objects
+            start_dt = datetime.strptime(start_str, "%Y-%m-%d")
+            end_dt = datetime.strptime(end_str, "%Y-%m-%d")
+        
+            # Convert to Unix timestamps
+            start_ts = start_dt.timestamp()
+            end_ts = end_dt.timestamp()
+        
+            # Query using numeric timestamp
+            query = {'timestamp': {'$gte': start_ts, '$lt': end_ts}}
         else:
-            query = {'datetime': {'$regex': selected_period}}
-            # query = {'metadata.platform': selected_platform,
-            #          'datetime': {'$regex': selected_period}}
+            start_dt = datetime.strptime(selected_period, "%Y-%m-%d")
+            end_dt = start_dt + timedelta(days=1)
+            
+            # Convert to numeric timestamp
+            start_ts = start_dt.timestamp()
+            end_ts = end_dt.timestamp()
+            
+            # Use numeric range in query
+            query = {"timestamp": {"$gte": start_ts, "$lt": end_ts}}
         
         data = list(collection.find(query))    
         df = pd.json_normalize(data)
