@@ -100,8 +100,8 @@ water_columns = {
     'Biscayne Bay': 96,
     'Little River (Up)': 3,
     'Little River (Down)': 20,
-    'North Bay Village (West)': 55,
-    'North Bay Village (East)': 0,
+    'North Bay Village (North)': 55,
+    'North Bay Village (South)': 0,
     'Miami River': 78,
     'Miami River (Down)': 0
 }
