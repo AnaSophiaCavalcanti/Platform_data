@@ -22,7 +22,7 @@ mongo_uri = os.getenv('MONGO_URI')
 client = MongoClient(mongo_uri,  tlsCAFile=certifi.where()) #tlsAllowInvalidCertificates=True,
 db = client["fdep_project"]
 
-@st.cache_resource
+#@st.cache_resource
 def update_collection_dates():
     
     # Load existing document from MongoDB
