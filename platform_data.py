@@ -171,30 +171,31 @@ with tab1:
         selected_period = st.selectbox("Select the date:", dates if option == "Daily" else week_options)
     
         if option == "Weekly":
-            # Parse start and end dates from string
+            # Split the selected period string into start and end date parts
             start_str, end_str = selected_period.split(" - ")
             
-            # Convert to datetime objects
-            start_dt = datetime.strptime(start_str, "%Y-%m-%d")
-            end_dt = datetime.strptime(end_str, "%Y-%m-%d")
-        
-            # Convert to Unix timestamps
-            start_ts = start_dt.timestamp()
-            end_ts = end_dt.timestamp()
-        
-            # Query using numeric timestamp
+            # Define the local timezone
+            local_tz = pytz.timezone("America/New_York")
+            
+            # Parse the start and end dates as naive datetime objects
+            start_naive = datetime.strptime(start_str, "%Y-%m-%d")
+            end_naive = datetime.strptime(end_str, "%Y-%m-%d")
+            
+            # Localize to the selected timezone
+            start_local = local_tz.localize(start_naive)
+            end_local = local_tz.localize(end_naive)
+            
+            # Convert localized datetimes to UTC
+            start_utc = start_local.astimezone(pytz.utc)
+            end_utc = end_local.astimezone(pytz.utc)
+            
+            # Convert to Unix timestamps (for querying indexed numeric timestamp fields)
+            start_ts = start_utc.timestamp()
+            end_ts = end_utc.timestamp()
+            
+            # Build MongoDB query to filter documents in the selected range
             query = {'timestamp': {'$gte': start_ts, '$lt': end_ts}}
-        else:
-            # start_dt = datetime.strptime(selected_period, "%Y-%m-%d")
-            # end_dt = start_dt + timedelta(days=1)
-            
-            # # Convert to numeric timestamp
-            # start_ts = start_dt.timestamp()
-            # end_ts = end_dt.timestamp()
-            
-            # # Use numeric range in query
-            # query = {"timestamp": {"$gte": start_ts, "$lt": end_ts}}
-            
+        else:           
             # Define the local timezone (e.g., Miami = America/New_York)
             local_tz = pytz.timezone("America/New_York")
             
