@@ -8,7 +8,7 @@ import pydeck as pdk
 from datetime import datetime, timedelta
 import hashlib
 import certifi
-import json
+import pytz
 
 
 # Function to verify the password
@@ -185,14 +185,29 @@ with tab1:
             # Query using numeric timestamp
             query = {'timestamp': {'$gte': start_ts, '$lt': end_ts}}
         else:
-            start_dt = datetime.strptime(selected_period, "%Y-%m-%d")
-            end_dt = start_dt + timedelta(days=1)
+            # start_dt = datetime.strptime(selected_period, "%Y-%m-%d")
+            # end_dt = start_dt + timedelta(days=1)
             
-            # Convert to numeric timestamp
-            start_ts = start_dt.timestamp()
-            end_ts = end_dt.timestamp()
+            # # Convert to numeric timestamp
+            # start_ts = start_dt.timestamp()
+            # end_ts = end_dt.timestamp()
             
-            # Use numeric range in query
+            # # Use numeric range in query
+            # query = {"timestamp": {"$gte": start_ts, "$lt": end_ts}}
+            
+            # Define the local timezone (e.g., Miami = America/New_York)
+            local_tz = pytz.timezone("America/New_York")
+            
+            # Parse the selected day 
+            start_naive = datetime.strptime(selected_period, "%Y-%m-%d")  # naive datetime (no timezone)
+            start_local = local_tz.localize(start_naive)                  # attach local timezone
+            end_local = start_local + timedelta(days=1)                   # end of the day in local time
+            
+            # Convert both to UTC for comparison with MongoDB timestamps
+            start_ts = start_local.astimezone(pytz.utc).timestamp()
+            end_ts = end_local.astimezone(pytz.utc).timestamp()
+            
+            # Build the MongoDB query using numeric timestamps
             query = {"timestamp": {"$gte": start_ts, "$lt": end_ts}}
         
         data = list(collection.find(query))    
