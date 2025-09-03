@@ -19,7 +19,7 @@ load_dotenv()
 
 # Connect to MongoDB
 mongo_uri = os.getenv('MONGO_URI')
-client = MongoClient(mongo_uri,  tlsCAFile=certifi.where()) #tlsAllowInvalidCertificates=True,
+client = MongoClient(mongo_uri)#,  tlsCAFile=certifi.where()) #tlsAllowInvalidCertificates=True,
 db = client["fdep_project"]
 
 #@st.cache_resource
