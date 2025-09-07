@@ -83,21 +83,21 @@ for key in collections_:
 #collection = db['platforms_data']
 
 platform_location = {
-    'L0_parameters': 'BBC',
+    #'L0_parameters': 'BBC',
     'L1_parameters': 'Biscayne Canal',
-    'L2_parameters': 'Biscayne Bay',
+    #'L2_parameters': 'Biscayne Bay',
     'L3_parameters': 'Little River (Up)',
-    'L4_parameters': 'Little River (Down)',
-    'L5_parameters': 'North Bay Village (North)',
-    'L6_parameters': 'North Bay Village (South)',
+    #'L4_parameters': 'Little River (Down)',
+    #'L5_parameters': 'North Bay Village (North)',
+    #'L6_parameters': 'North Bay Village (South)',
     'L7_parameters': 'Miami River',   
-    'L8_parameters': 'Miami River (Down)',
+    #'L8_parameters': 'Miami River (Down)',
 }
 
 water_columns = {
-    'BBC': 0,
+    'BBC': 110,
     'Biscayne Canal': 2,
-    'Biscayne Bay': 96,
+    'Biscayne Bay': 51,
     'Little River (Up)': 3,
     'Little River (Down)': 20,
     'North Bay Village (North)': 55,
@@ -259,7 +259,7 @@ with tab1:
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=df['datetime'], y=y1, mode='lines', yaxis='y1', line=dict(color='rgba(0,0,255,1)'), name='sensor position'))
         fig.add_trace(go.Scatter(x=df_filter['datetime'], y=y2, mode='lines', yaxis='y2', line=dict(color='rgba(255,0,0,0.5)'), name='water level'))
-        fig.update_layout(title='Water Column Height', xaxis_title='Time [h]', yaxis_title='Sensor Position [cm]', yaxis=dict(range=[0, 160 + column]), yaxis2=dict(title='Water Level [cm]', overlaying = 'y', side='right', range=[0, 160 + column]))
+        fig.update_layout(title='Water Column Height', xaxis_title='Time [h]', yaxis_title='Sensor Position [cm]', yaxis=dict(range=[column, 160 + column]), yaxis2=dict(title='Water Level [cm]', overlaying = 'y', side='right', range=[column, 160 + column]))
         st.plotly_chart(fig, use_container_width=True)
         st.write('The vertical reference (zero height) is defined at the bottom of the water body beneath the platform. All height measurements represent the vertical distance from this reference point to the EXO sensors or the water surface.')
         # fig = go.Figure()
